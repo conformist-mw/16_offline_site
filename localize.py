@@ -1,6 +1,7 @@
+import argparse
 from lxml.html import fromstring, tostring, HtmlComment
-import re
 import os
+import re
 import requests
 match = re.compile(r'(\[if.*?)(<script.*?script>\s*)(<!\[endif\]$)', re.DOTALL)
 
@@ -8,6 +9,14 @@ match = re.compile(r'(\[if.*?)(<script.*?script>\s*)(<!\[endif\]$)', re.DOTALL)
 def load_root(file):
     with open(file, 'r') as f:
         return fromstring(f.read())
+
+
+def get_favicon(root):
+    favicon = root.find(".//link[@rel='icon']")
+    file = requests.get(favicon.attrib['href'])
+    with open('favicon.ico', 'wb') as f:
+        f.write(file.content)
+    favicon.attrib['href'] = 'favicon.ico'
 
 
 def find_all_css(root):
@@ -45,13 +54,18 @@ def handle_condcoms(root):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Localize your html with external links')
+    parser.add_argument('filepath', help='file html to localize')
+    args = parser.parse_args()
+    html = load_root(args.filepath)
     if not os.path.exists('css'):
         os.mkdir('css')
     if not os.path.exists('js'):
         os.mkdir('js')
-    html = load_root('index.html')
+    get_favicon(html)
     find_all_js(html)
     find_all_css(html)
     handle_condcoms(html)
-    with open('result.html', 'wb') as f:
+    with open('index.html', 'wb') as f:
         f.write(tostring(html))
